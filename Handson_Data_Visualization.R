@@ -13,19 +13,19 @@ library(tmap)
 
 # import data and maps ----------------------------------------------------
 
-ga_races <- read_csv("ga_races.csv", col_types = "cciiiiiiiiidddd")
-ga_counties <- st_read("Maps/ga_counties")
+ga_races <- read_csv("data/table_data/ga_races.csv", col_types = "cciiiiiiiiidddd")
+ga_counties_geo <- st_read("data/geospatial_data/ga_counties")
 
-metro_co_races <- read_csv("metro_co_races.csv", col_types = "cciiiiiiiiidddd")
+metro_co_races <- read_csv("data/table_data/metro_co_races.csv", col_types = "cciiiiiiiiidddd")
 
-metro_tract_races <- read_csv("metro_tract_race.csv", col_types = "ccciiiiiiiiidddd")
-metro_tracts20 <- st_read("metro_tracts20")
+metro_tract_races <- read_csv("data/table_data/metro_tract_race.csv", col_types = "ccciiiiiiiiidddd")
+metro_tracts20_geo <- st_read("data/geospatial_data/metro_tracts20")
 
-fulton_races <- read_csv("fulton_tract_race.csv", col_types = "ccciiiiiiiiidddd")
-fulton_tracts20 <- st_read("fulton_tracts20")
+fulton_races <- read_csv("data/table_data/fulton_tract_race.csv", col_types = "ccciiiiiiiiidddd")
+fulton_tracts20_geo <- st_read("data/geospatial_data/fulton_tracts20")
 
-metro_co_income <- read_csv("metro_county_inc.csv", col_types = "ccii")
-metro_tract_income <- read_csv("metro_tract_inc.csv", col_types = "cccii")
+metro_co_income <- read_csv("data/table_data/metro_county_inc.csv", col_types = "ccii")
+metro_tract_income <- read_csv("data/table_data/metro_tract_inc.csv", col_types = "cccii")
 
 # explore the data --------------------------------------------------------
 
@@ -46,7 +46,7 @@ ggplot(ga_races, aes(White_per)) +
   scale_x_continuous(limits = c(0, 100)) +
   scale_y_continuous(limits = c(0, 20))
 
-# use the same code for Blacks
+# use the same code for black people
 ggplot(ga_races, aes(Black_per)) +
   geom_histogram(color = "navy", fill = "steelblue") +
   theme_classic() +
@@ -56,7 +56,7 @@ ggplot(ga_races, aes(Black_per)) +
 # make maps ---------------------------------------------------------------
 
 # create a map of Georgia's races
-ga_race_map <- left_join(ga_counties, ga_races,
+ga_race_map <- left_join(ga_counties_geo, ga_races,
                          by = "GEOID")
 
 # map the Black percentage by county, using the ggplot and sf packages
@@ -104,7 +104,7 @@ tm_shape(ga_race_map) +
                          "Black (%)" = "Black_per"))
 
 # create map of Fulton county race data
-fulton_tract_race_map <- left_join(fulton_tracts20, 
+fulton_tract_race_map <- left_join(fulton_tracts20_geo, 
                                    fulton_races,
                                    by = "GEOID")
 
@@ -122,7 +122,7 @@ tm_shape(fulton_tract_race_map) +
 # map racial groups by tract 
 
 # first convert tracts (polygons) to centroids
-metro_centroids20 <- st_centroid(metro_tracts20)
+metro_centroids20 <- st_centroid(metro_tracts20_geo)
 
 # convert metro tract race table to long format using tidyr 
 metro_tract_race_long <- metro_tract_races %>% 
@@ -132,7 +132,7 @@ metro_tract_race_long <- metro_tract_races %>%
                values_to = "Percent")
 
 # join tract race data with 2020 tract map
-metro_tract_race_long_map <- inner_join(metro_tracts20,
+metro_tract_race_long_map <- inner_join(metro_tracts20_geo,
                                         metro_tract_race_long,
                                         by = "GEOID")
 
@@ -164,6 +164,8 @@ tm_shape(metro_tract_race_long_map) +
 metro_co_long <- metro_co_races %>% 
   select(County = NAME, White_per, Black_per, Hispanic_per, Asian_per) %>% 
   pivot_longer(!County, names_to = "Race", values_to = "Percent")
+
+metro_co_long
 
 # remove ", Georgia" from County field -- it will clog the chart
 metro_co_long <- metro_co_long %>% 
