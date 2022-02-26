@@ -13,19 +13,35 @@ library(tmap)
 
 # import data and maps ----------------------------------------------------
 
-ga_races <- read_csv("data/table_data/ga_races.csv", col_types = "cciiiiiiiiidddd")
+# data tables from csv files
+# the col_types choice below makes the sure the GEOID is read as text not a number
+ga_races <- read_csv("data/table_data/ga_races.csv", 
+                                 col_types = cols(GEOID = col_character())) 
+
+metro_co_races <- read_csv("data/table_data/metro_co_races.csv", 
+                           col_types = cols(GEOID = col_character()))
+
+metro_tract_races <- read_csv("data/table_data/metro_tract_race.csv", 
+                                                  col_types = cols(GEOID = col_character()))
+
+fulton_races <- read_csv("data/table_data/metro_tract_race.csv", 
+                         col_types = cols(GEOID = col_character()))
+
+metro_co_income <- read_csv("data/table_data/metro_county_inc.csv", 
+                            col_types = cols(GEOID = col_character()))
+
+metro_tract_income <- read_csv("data/table_data/metro_tract_inc.csv", 
+                               col_types = cols(GEOID = col_character()))
+
+# map/geospatial boundary files
+# we use st_read() from the sf pacakge to bring in the shapefiles
 ga_counties_geo <- st_read("data/geospatial_data/ga_counties")
 
-metro_co_races <- read_csv("data/table_data/metro_co_races.csv", col_types = "cciiiiiiiiidddd")
-
-metro_tract_races <- read_csv("data/table_data/metro_tract_race.csv", col_types = "ccciiiiiiiiidddd")
 metro_tracts20_geo <- st_read("data/geospatial_data/metro_tracts20")
 
-fulton_races <- read_csv("data/table_data/fulton_tract_race.csv", col_types = "ccciiiiiiiiidddd")
 fulton_tracts20_geo <- st_read("data/geospatial_data/fulton_tracts20")
 
-metro_co_income <- read_csv("data/table_data/metro_county_inc.csv", col_types = "ccii")
-metro_tract_income <- read_csv("data/table_data/metro_tract_inc.csv", col_types = "cccii")
+
 
 # explore the data --------------------------------------------------------
 
@@ -108,7 +124,7 @@ fulton_tract_race_map <- left_join(fulton_tracts20_geo,
                                    fulton_races,
                                    by = "GEOID")
 
-# interactive "bubble" map of Black population in Fulton tracts (2020)
+# "bubble" map of Black population in Fulton tracts (2020)
 tm_shape(fulton_tract_race_map) +
   tm_polygons() +
   tm_bubbles(size = "Black_per", alpha = 0.2, col = "green")
@@ -170,6 +186,8 @@ metro_co_long
 # remove ", Georgia" from County field -- it will clog the chart
 metro_co_long <- metro_co_long %>% 
   mutate(County = str_remove(County, ",.*$"))
+
+metro_co_long
 
 # let's look at individual counties within the metro with a bar chart
 ggplot(metro_co_long, aes(x = County, y = Percent, fill = Race)) +
