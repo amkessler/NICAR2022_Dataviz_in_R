@@ -1,4 +1,4 @@
-# NICAR 2022
+# NICAR2022_Dataviz_in_R
 
 This is the repository for an <code>R</code> class on advanced concepts in visualization at the <code>NICAR Conference</code> in Atlanta March 3-6, 2022. The conference will also be conducted online.
 
