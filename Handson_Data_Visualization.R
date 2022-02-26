@@ -62,12 +62,14 @@ ggplot(ga_races, aes(White_per)) +
   scale_x_continuous(limits = c(0, 100)) +
   scale_y_continuous(limits = c(0, 20))
 
-# use the same code for black people
+# use the same code for black residents
 ggplot(ga_races, aes(Black_per)) +
   geom_histogram(color = "navy", fill = "steelblue") +
   theme_classic() +
   scale_x_continuous(limits = c(0, 100)) +
   scale_y_continuous(limits = c(0, 20))
+
+
 
 # make maps ---------------------------------------------------------------
 
@@ -75,7 +77,11 @@ ggplot(ga_races, aes(Black_per)) +
 ga_race_map <- left_join(ga_counties_geo, ga_races,
                          by = "GEOID")
 
-# map the Black percentage by county, using the ggplot and sf packages
+# we can create maps of geospatial data right in ggplot2 like this:
+ggplot(ga_race_map) +
+  geom_sf()
+
+# to map the Black percentage by county, we'll use the aesthetic of fill
 ggplot(ga_race_map) +
   geom_sf(aes(fill = Black_per))
 
@@ -191,11 +197,11 @@ metro_co_long
 
 # let's look at individual counties within the metro with a bar chart
 ggplot(metro_co_long, aes(x = County, y = Percent, fill = Race)) +
-  geom_bar(position = "stack", stat = "identity") 
+  geom_col(position = "stack") 
 
 # clean up the county labels, add title 
 ggplot(metro_co_long, aes(x = County, y = Percent, fill = Race)) +
-  geom_bar(position = "stack", stat = "identity") +
+  geom_col(position = "stack") +
   labs(title = 'Racial makeup of Atlanta metro counties',
        caption = 'Source: 2020 census') +
   theme_classic() +
