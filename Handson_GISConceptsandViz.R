@@ -252,13 +252,13 @@ mymap
 # We've done something with points, let's now look at a real-world choropleth use case
 
 # load dataset of district characteristics for pre-2018 election U.S. House districts
-alldistricts <- readRDS(here("data", "alldistricts.rds"))
+alldistricts <- readRDS("data/table_data/alldistricts.rds")
 
 alldistricts
 
 # Since above we used the tigris package to get our base map, this time let's see what's
 # involved in loading a geospatial file you already have yourself and want to bring into R.
-cd_geo <- st_read(here("data", "cb_2018_us_cd116_20m/cb_2018_us_cd116_20m.shp"))
+cd_geo <- st_read(here("data/geospatial_data/cb_2018_us_cd116_20m"))
 
 head(cd_geo)
 
@@ -333,7 +333,7 @@ map_rheld_demadvantage_byeducation <- tm_shape(districtmap) +
 map_rheld_demadvantage_byeducation
 
 # now we can export it
-tmap_save(map_rheld_demadvantage_byeducation, here("map_rheld_demadvantage_byeducation.pdf"))
+tmap_save(map_rheld_demadvantage_byeducation, "map_rheld_demadvantage_byeducation.pdf")
 
 
 
@@ -428,7 +428,7 @@ districtmap <- inner_join(districtmap, fips_statelookup, by = c("STATEFP" = "sta
 
 # create slice of just one state
 cd_onestate <- districtmap %>% 
-  filter(state == "CA")
+  filter(state == "GA")
 
 #let's see what we've got
 tm_shape(cd_onestate) +
@@ -447,13 +447,13 @@ make_state_map <- function(stateabbr){
     tm_polygons("pct_ed_college_all", id = "GEOID") +
     tm_text("CD116FP", size = .5)
   #export file to pdf
-  filename <- paste0("districtmap_", stateabbr, ".pdf")
+  filename <- paste0("stateoutputs/districtmap_", stateabbr, ".pdf")
   print(filename)
-  tmap_save(mymap_test, here("stateoutputs", filename))
+  tmap_save(mymap_test, filename)
 }
 
 # try for just one state
-make_state_map("CA")
+make_state_map("GA")
 
 # let's take a look at the generated pdf file. Did it work?
 
