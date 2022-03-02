@@ -1,8 +1,13 @@
 ---
-title: "Intro to GIS Visualization in R"
+title: "Intro to GIS / Mapping Visualization in R"
 author: "Aaron Kessler"
-date: "11/2/2021"
-output: html_document
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    code_folding: show
+    df_print: kable
+    toc: yes
+    toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
