@@ -1,0 +1,365 @@
+---
+title: "Network Analysis Visualizations"
+author: "Aaron Kessler"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    code_folding: show
+    df_print: kable
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(kableExtra)
+library(here)
+library(janitor)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+options(dplyr.summarise.inform = FALSE)
+
+#load dataset
+top_ten_consolidated_casecounts <- readRDS("data/table_data/top_ten_consolidated_casecounts.rds")
+
+
+```
+
+# Social Network Analysis
+
+## Create the node and edge network datasets with igraph
+
+Edges
+```{r}
+
+edges <- top_ten_consolidated_casecounts %>% 
+  select(source = clean_firm_consolidated,
+         target = parent_company, 
+         weight = cases)
+
+edges %>% head(10)
+
+```
+
+Nodes
+```{r}
+
+names1 <- top_ten_consolidated_casecounts %>% 
+  ungroup() %>% 
+  select(name = parent_company) %>% 
+  distinct() %>% 
+  mutate(group = "company")
+
+names2 <- top_ten_consolidated_casecounts %>% 
+  ungroup() %>% 
+  select(name = clean_firm_consolidated) %>% 
+  distinct() %>% 
+  mutate(group = "lawfirm")
+
+nodes <- bind_rows(names1, names2)
+
+#add id columns with sequential values
+#will zero-index the values to work with igraph more smoothly
+nodes <- tibble::rowid_to_column(nodes, "id") %>% 
+  mutate(id = id - 1) %>% 
+  select(name, id, group)
+
+
+nodes %>% 
+  head(10)
+
+```
+
+
+### igraph object creation
+
+```{r}
+
+g <- graph_from_data_frame(d = edges, 
+                           vertices = nodes, 
+                           directed = FALSE)
+g
+
+
+```
+
+Access nodes
+
+```{r}
+
+V(g)
+
+
+```
+
+Names of each node
+
+```{r}
+
+head(V(g)$name)
+
+
+```
+
+Edges
+
+```{r}
+
+E(g) # edges
+
+
+```
+
+
+Weights for each edge 
+
+```{r}
+
+E(g)$weight # weights for each edge
+
+
+```
+
+attributes of edges
+```{r}
+
+edge_attr(g) 
+
+
+```
+
+
+# Network visualization
+
+
+## Using Tidygraph for node and edge sets
+
+Create the tbl_graph
+
+```{r}
+# https://www.jessesadler.com/post/network-analysis-with-r/
+
+routes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
+
+```
+
+
+
+```{r}
+class(routes_tidy)
+
+
+```
+
+Printing out a tbl_graph object to the console results in a drastically different output from that of an igraph object. It is an output similar to that of a normal tibble.
+
+
+```{r}
+
+routes_tidy
+
+
+```
+
+Visualize with ggraph https://cran.r-project.org/web/packages/ggraph/index.html
+
+
+```{r}
+ggraph(routes_tidy) + 
+  geom_edge_link() + 
+  geom_node_point() + 
+  theme_graph()
+
+
+```
+
+
+
+```{r}
+
+ggraph(routes_tidy, layout = "graphopt") + 
+  geom_node_point() +
+  geom_edge_link(alpha = 0.8) + 
+  # geom_node_text(aes(label = label), repel = TRUE) +
+  theme_graph()
+
+```
+
+
+
+```{r}
+
+ggraph(routes_tidy, layout = "graphopt") + 
+  geom_node_point(aes(color = group, size = .4)) +
+  geom_edge_link(alpha = 0.6) + 
+  # geom_node_text(aes(label = label), repel = TRUE) +
+  theme_graph()
+
+```
+
+### Only firms that serve more than one company
+
+```{r}
+
+edgegroup2 <- edges %>% 
+  ungroup() %>% 
+  count(source) %>% 
+  filter(n > 1)
+
+
+edgevec2 <- edgegroup2 %>% pull(source)
+
+edges_two_or_more <- edges %>% 
+  filter(source %in% edgevec2)
+
+
+
+n1 <- nodes %>% 
+  select(name, group) %>% 
+  filter(group == "company")
+
+n2 <- nodes %>% 
+  select(name, group) %>% 
+  filter(group == "lawfirm",
+         name %in% edgevec2)
+
+nodes_two_or_more <- bind_rows(n1, n2)
+
+nodes_two_or_more <- tibble::rowid_to_column(nodes_two_or_more, "id") %>% 
+  mutate(id = id - 1) %>% 
+  select(name, id, group)
+
+```
+
+
+### Only firms that serve more than TWO companies (THREE MINIMUM)
+
+```{r}
+
+edgegroup3 <- edges %>% 
+  ungroup() %>% 
+  count(source) %>% 
+  filter(n > 2)
+
+
+edgevec3 <- edgegroup3 %>% pull(source)
+
+edges_three_or_more <- edges %>% 
+  filter(source %in% edgevec3)
+
+
+
+n1b <- nodes %>% 
+  select(name, group) %>% 
+  filter(group == "company")
+
+n2b <- nodes %>% 
+  select(name, group) %>% 
+  filter(group == "lawfirm",
+         name %in% edgevec3)
+
+nodes_three_or_more <- bind_rows(n1b, n2b)
+
+nodes_three_or_more <- tibble::rowid_to_column(nodes_three_or_more, "id") %>% 
+  mutate(id = id - 1) %>% 
+  select(name, id, group)
+
+```
+
+Create the tbl_graph
+
+```{r}
+# https://www.jessesadler.com/post/network-analysis-with-r/
+
+routes_tidy_two_or_more <- tbl_graph(nodes = nodes_two_or_more, edges = edges_two_or_more, directed = FALSE)
+
+```
+
+
+
+```{r}
+class(routes_tidy_two_or_more)
+
+
+```
+
+```{r}
+
+routes_tidy_two_or_more
+
+
+```
+
+
+
+```{r}
+
+ggraph(routes_tidy_two_or_more, layout = "graphopt") + 
+  geom_node_point(aes(color = group, size = .6)) +
+  geom_edge_link(alpha = 0.8) + 
+  # scale_edge_width(range = c(0.2, 1)) +
+  # geom_node_text(aes(label = name), repel = TRUE) +
+  # labs(edge_width = "# of cases") +
+  theme_graph()
+
+
+
+```
+
+
+
+```{r}
+
+
+ggraph(routes_tidy_two_or_more, layout = "drl") + 
+  geom_node_point(aes(color = group, size = .6)) +
+  geom_edge_link(alpha = 0.8) + 
+  # scale_edge_width(range = c(0.2, 1)) +
+  # geom_node_text(aes(label = name), repel = TRUE) +
+  # labs(edge_width = "# of cases") +
+  theme_graph()
+
+
+```
+
+
+
+```{r}
+
+
+ggraph(routes_tidy_two_or_more, layout = "stress") + 
+  geom_node_point(aes(color = group, size = .6)) +
+  geom_edge_link(alpha = 0.8) + 
+  # scale_edge_width(range = c(0.2, 1)) +
+  # geom_node_text(aes(label = name), repel = TRUE) +
+  # labs(edge_width = "# of cases") +
+  theme_graph()
+
+
+```
+
+
+
+```{r}
+
+final <- ggraph(routes_tidy_two_or_more, layout = "stress") + 
+  geom_node_point(aes(color = group, 
+                      size = .6
+                      # shape = group
+                      )) +
+  geom_edge_link(alpha = 0.8,
+                 color = "grey66") + 
+  # scale_edge_width(range = c(0.2, 1)) +
+  geom_node_text(aes(filter = group=="company", label = name), 
+                 family = "serif", 
+                 repel = TRUE) +
+  # labs(edge_width = "# of cases") +
+  theme_graph()
+
+
+final
+
+```
