@@ -30,9 +30,18 @@ top_ten_consolidated_casecounts <- readRDS("data/table_data/top_ten_consolidated
 
 # Social Network Analysis
 
+Let's take a look at our data
+
+```{r}
+
+head(top_ten_consolidated_casecounts)
+
+```
+
 ## Create the node and edge network datasets with igraph
 
 Edges
+
 ```{r}
 
 edges <- top_ten_consolidated_casecounts %>% 
@@ -45,34 +54,46 @@ edges %>% head(10)
 ```
 
 Nodes
-```{r}
 
+```{r}
 names1 <- top_ten_consolidated_casecounts %>% 
   ungroup() %>% 
   select(name = parent_company) %>% 
   distinct() %>% 
   mutate(group = "company")
 
+head(names1)
+```
+
+```{r}
 names2 <- top_ten_consolidated_casecounts %>% 
   ungroup() %>% 
   select(name = clean_firm_consolidated) %>% 
   distinct() %>% 
   mutate(group = "lawfirm")
 
+head(names2)
+```
+
+```{r}
 nodes <- bind_rows(names1, names2)
 
-#add id columns with sequential values
-#will zero-index the values to work with igraph more smoothly
+head(nodes)
+```
+
+Add id columns with sequential values.\
+Will zero-index the values to work with igraph more smoothly.
+
+```{r}
+
 nodes <- tibble::rowid_to_column(nodes, "id") %>% 
   mutate(id = id - 1) %>% 
   select(name, id, group)
-
 
 nodes %>% 
   head(10)
 
 ```
-
 
 ### igraph object creation
 
@@ -113,8 +134,7 @@ E(g) # edges
 
 ```
 
-
-Weights for each edge 
+Weights for each edge
 
 ```{r}
 
@@ -124,6 +144,7 @@ E(g)$weight # weights for each edge
 ```
 
 attributes of edges
+
 ```{r}
 
 edge_attr(g) 
@@ -131,13 +152,11 @@ edge_attr(g)
 
 ```
 
-
 # Network visualization
-
 
 ## Using Tidygraph for node and edge sets
 
-Create the tbl_graph
+Create the tbl_graph object.
 
 ```{r}
 # https://www.jessesadler.com/post/network-analysis-with-r/
@@ -146,16 +165,12 @@ routes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
 
 ```
 
-
-
 ```{r}
 class(routes_tidy)
 
-
 ```
 
-Printing out a tbl_graph object to the console results in a drastically different output from that of an igraph object. It is an output similar to that of a normal tibble.
-
+Printing out a tbl_graph object to the console results in a drastically different output from that of an igraph object. It is an output similar to that of a normal tibble we're familiar with.
 
 ```{r}
 
@@ -164,8 +179,7 @@ routes_tidy
 
 ```
 
-Visualize with ggraph https://cran.r-project.org/web/packages/ggraph/index.html
-
+Visualize with ggraph.
 
 ```{r}
 ggraph(routes_tidy) + 
@@ -176,7 +190,7 @@ ggraph(routes_tidy) +
 
 ```
 
-
+Well that wasn't very helpful. Let's try a different layout and parameters.
 
 ```{r}
 
@@ -188,7 +202,7 @@ ggraph(routes_tidy, layout = "graphopt") +
 
 ```
 
-
+Now we'll add some color and size options.
 
 ```{r}
 
@@ -201,6 +215,10 @@ ggraph(routes_tidy, layout = "graphopt") +
 ```
 
 ### Only firms that serve more than one company
+
+To trim down our network to only the most meaningful core connections, let's filter down to the firms that only connect to at least two companies.
+
+One way we can do this is to do some grouping/counting of our edges in much the same way we do that with a regular tibble. We'll aim to find the onces that show up at least twice, and then use that to filter the edges object itself.
 
 ```{r}
 
@@ -215,9 +233,16 @@ edgevec2 <- edgegroup2 %>% pull(source)
 edges_two_or_more <- edges %>% 
   filter(source %in% edgevec2)
 
+head(edges_two_or_more)
 
 
-n1 <- nodes %>% 
+```
+
+Now let's used that same vector of values to filter the nodes.
+
+```{r}
+
+n1 <- nodes %>%
   select(name, group) %>% 
   filter(group == "company")
 
@@ -231,11 +256,14 @@ nodes_two_or_more <- bind_rows(n1, n2)
 nodes_two_or_more <- tibble::rowid_to_column(nodes_two_or_more, "id") %>% 
   mutate(id = id - 1) %>% 
   select(name, id, group)
+  
+head(nodes_two_or_more)
 
 ```
 
+### Only firms that serve more than TWO companies (3+).
 
-### Only firms that serve more than TWO companies (THREE MINIMUM)
+Now, let's zero in even more to the most prominent connections within the network - we'll do only those edges that have at least three connections.
 
 ```{r}
 
@@ -244,12 +272,10 @@ edgegroup3 <- edges %>%
   count(source) %>% 
   filter(n > 2)
 
-
 edgevec3 <- edgegroup3 %>% pull(source)
 
 edges_three_or_more <- edges %>% 
   filter(source %in% edgevec3)
-
 
 
 n1b <- nodes %>% 
@@ -269,20 +295,12 @@ nodes_three_or_more <- tibble::rowid_to_column(nodes_three_or_more, "id") %>%
 
 ```
 
-Create the tbl_graph
+Create the tbl_graph with our newly filtered set of values.
 
 ```{r}
 # https://www.jessesadler.com/post/network-analysis-with-r/
 
 routes_tidy_two_or_more <- tbl_graph(nodes = nodes_two_or_more, edges = edges_two_or_more, directed = FALSE)
-
-```
-
-
-
-```{r}
-class(routes_tidy_two_or_more)
-
 
 ```
 
@@ -293,7 +311,7 @@ routes_tidy_two_or_more
 
 ```
 
-
+Now let's visualize the newly pruned network to see what we have.
 
 ```{r}
 
@@ -305,11 +323,9 @@ ggraph(routes_tidy_two_or_more, layout = "graphopt") +
   # labs(edge_width = "# of cases") +
   theme_graph()
 
-
-
 ```
 
-
+Another layout choice.
 
 ```{r}
 
@@ -325,7 +341,7 @@ ggraph(routes_tidy_two_or_more, layout = "drl") +
 
 ```
 
-
+Yet another.
 
 ```{r}
 
@@ -341,7 +357,7 @@ ggraph(routes_tidy_two_or_more, layout = "stress") +
 
 ```
 
-
+I like this last one, so let's use that for our final version, and then add some additional options to the visualization.
 
 ```{r}
 
@@ -363,3 +379,5 @@ final <- ggraph(routes_tidy_two_or_more, layout = "stress") +
 final
 
 ```
+
+And there we go! Nice. We've made it, and congrats on your first network visualization in R.
