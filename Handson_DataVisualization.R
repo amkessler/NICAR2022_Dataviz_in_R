@@ -47,7 +47,7 @@ fulton_tracts20_geo <- st_read("data/geospatial_data/fulton_tracts20")
 
 # use histogram to analyze racial patterns in Georgia counties
 ggplot(ga_races, aes(White_per)) +
-  geom_histogram()
+  geom_histogram(bins = 30)
 
 # add horizontal, vertical scales so we can chart all races consistently
 ggplot(ga_races, aes(White_per)) +
