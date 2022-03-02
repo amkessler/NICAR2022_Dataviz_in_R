@@ -1,0 +1,346 @@
+---
+title: "Charting using Plotly - Net Moves By Zipcode"
+author: "Aaron Kessler"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: yeti
+    code_folding: hide
+    df_print: kable
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(writexl)
+library(openxlsx)
+library(janitor)
+library(leaflet)
+library(RColorBrewer)
+library(htmlwidgets)
+library(htmltools)
+library(tigris)
+library(plotly)
+options(dplyr.summarise.inform = FALSE)
+
+#### DATA PREP ####
+
+### Covid Categorization 
+#vectors for covid months vs not
+
+yyyymm_vector_noncovid <- c("201903",
+                        "201904",
+                        "201905",
+                        "201906",
+                        "201907",
+                        "201908",
+                        "201909",
+                        "201910",
+                        "201911",
+                        "201912", 
+                        "202001",
+                        "202002")
+
+yyyymm_vector_covid <- c("202003",
+                           "202004",
+                           "202005",
+                           "202006",
+                           "202007",
+                           "202008",
+                           "202009",
+                           "202010",
+                           "202011",
+                           "202012", 
+                           "202101",
+                           "202102")
+
+
+###### IN-OUT FLOW NET DATASET #### ------------------------------------------
+
+# bring in the other USPS dataset of aggregate in-out flows by zip
+#save to file for use in subsequent steps
+net_flows_usps_zips <- readRDS("data/table_data/net_flows_usps_zips.rds")
+
+#create fields to designate a covid months vs. noncovid 
+net_flows_usps_zips <- net_flows_usps_zips %>% 
+  mutate(
+    covid_flag = case_when(
+      yyyymm %in% yyyymm_vector_noncovid ~ "noncovid",
+      yyyymm %in% yyyymm_vector_covid ~ "covid",
+      TRUE ~ "other"
+      )
+    )
+      
+### Filter out months that are "other"
+net_flows_usps_zips <- net_flows_usps_zips %>% 
+  filter(covid_flag != "other")
+
+```
+
+
+```{r, include=FALSE}
+#Create NYC in-out flow ####
+
+# import zip code list and crosswalk from
+# https://www.baruch.cuny.edu/confluence/display/geoportal/NYC+Geographies
+nyc_lookup <- read_excel("data/table_data/zip_to_zcta10_nyc_revised.xlsx", 
+                                        sheet = "zip_to_zcta")
+
+#filter out companies with own zip codes and Post Offices
+nyc_lookup_justres <- nyc_lookup %>% 
+  filter(ziptype == "ZIP Code area") %>% 
+  distinct(zipcode, borough)
+
+#### join net flows table
+net_flows_usps_zips_NYC <- inner_join(net_flows_usps_zips, nyc_lookup_justres, by = "zipcode")
+
+head(net_flows_usps_zips_NYC)
+
+net_flows_usps_zips_NYC %>% 
+  count(zipcode)
+
+```
+
+## NYC aggregate in-out flows
+
+Next let's examine the net inflow-outlow aggregate dataset by USPS.
+
+```{r}
+#grand totals per covid vs. not
+net_flows_usps_zips_NYC %>% 
+  group_by(covid_flag) %>% 
+  summarise(total_out = sum(total_from_zip, na.rm = TRUE), 
+            total_in = sum(total_to_zip, na.rm = TRUE),
+            total_net_gain = sum(total_net_gain, na.rm = TRUE))
+
+```
+
+Let's look at that by borough.
+
+```{r}
+#compare by BOROUGH
+net_flows_usps_zips_NYC %>% 
+  group_by(borough, covid_flag) %>% 
+  summarise(total_out = sum(total_from_zip, na.rm = TRUE), 
+            total_in = sum(total_to_zip, na.rm = TRUE),
+            total_net_gain = sum(total_net_gain, na.rm = TRUE)) 
+
+```
+
+Let's look at it through the lens of time and money.
+
+<br>
+
+### Net flows by month
+
+We can see the enormous exodus that happened in March 2020 and the subsequent months, with a rebound as the year progressed.
+
+The city was still losing more people on a net basis, but the gradually less than before.
+
+```{r}
+net_flows_NYC_monthly <- net_flows_usps_zips_NYC %>% 
+  group_by(datemonth, covid_flag) %>% 
+  summarise(total_net_gain = sum(total_net_gain, na.rm = TRUE))
+
+head(net_flows_NYC_monthly)
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+fig <- plot_ly(data= net_flows_NYC_monthly, x = ~datemonth, y = ~total_net_gain, name = 'Moves', 
+               type = 'scatter', mode = 'bars',
+               line = list(color = 'darkred', width = 3))
+
+fig <- fig %>% layout(title = "Net number of household moves from all NYC zip codes",
+         xaxis = list(title = "Months"),
+         yaxis = list (title = "Net gain/loss in Moves"))
+
+fig <- fig %>% 
+  config(displayModeBar = FALSE)
+
+fig
+
+```
+
+### Net flows by month and zip
+
+What does that look like for each zip code individually throughout the city?
+
+```{r}
+
+net_flows_monthly_byzip <- net_flows_usps_zips_NYC %>% 
+  group_by(datemonth, zipcode) %>% 
+  summarise(total_net_gain = sum(total_net_gain, na.rm = TRUE))
+
+# net_flows_monthly_byzip
+
+#create plotly chart object
+all_zips_plotlychart <- net_flows_monthly_byzip %>%
+  group_by(zipcode) %>%
+  plot_ly(x = ~datemonth, y = ~total_net_gain) %>%
+  add_lines(
+    name = "NYC Zips", 
+    line = list(width = 1.33), 
+    alpha = 0.2, 
+    hoverinfo = "none"
+  ) %>%
+  ungroup()
+
+all_zips_plotlychart <- all_zips_plotlychart %>% 
+  layout(title = "Net gain/loss of NYC moves by zip code",
+         xaxis = list(title = "Month"),
+         yaxis = list (title = "Net gain/loss of households")) %>% 
+  config(displayModeBar = FALSE)
+
+all_zips_plotlychart 
+
+```
+
+That's a little hard to decipher on its own.\
+Let's look at the where the ***highest-income zips in the city*** are themselves in that hairball.
+
+```{r}
+### join IRS data back in to pull together wealth measures from AGI
+irs_zips_agi_grouped <- readRDS("data/table_data/irs_zips_agi_grouped.rds")
+
+netflows_by_zip_withagi <- net_flows_usps_zips_NYC %>% 
+  group_by(zipcode) %>% 
+  summarise(total_net_gain = sum(total_net_gain, na.rm = TRUE))
+
+netflows_by_zip_withagi <- left_join(netflows_by_zip_withagi, irs_zips_agi_grouped, by = "zipcode") 
+
+nyc_agi_top5zips <- netflows_by_zip_withagi %>% 
+  arrange(desc(avg_agi)) %>% 
+  head(8) %>% 
+  pull(zipcode)
+
+nyc_agi_botton5zips <- netflows_by_zip_withagi %>% 
+  arrange(avg_agi) %>% 
+  head(8) %>% 
+  pull(zipcode)
+```
+
+
+```{r}
+# # highlight one zip
+# all_zips_plotlychart %>%
+#   filter(zipcode == "10011") %>%
+#   add_lines(name = "10011")
+
+
+# create function to handle multiple zips fed to plotly object at once
+zip_layer <- function(plot_obj, zip_name) {
+  plot_obj %>%
+    filter(zipcode == zip_name) %>%
+    add_lines(name = zip_name)
+}
+
+# sort(nyc_agi_top5zips)
+
+#highest income zips
+all_zips_plotlychart %>%
+  add_fun(zip_layer, zip_name = "10005") %>%
+  add_fun(zip_layer, zip_name = "10007") %>%
+  add_fun(zip_layer, zip_name = "10282") %>% 
+  add_fun(zip_layer, zip_name = "10022") %>%
+  add_fun(zip_layer, zip_name = "10069") %>% # <- top five ends here
+  add_fun(zip_layer, zip_name = "10013") %>%
+  add_fun(zip_layer, zip_name = "10018") %>% 
+  add_fun(zip_layer, zip_name = "10021") 
+```
+
+Now let's look at the ***lowest-income zip codes in the city***, many clustered in the Bronx, to see how they've fared.
+
+In this case, it appears the poorest zips barely changed at all during the Covid era.
+
+```{r}
+
+# sort(nyc_agi_botton5zips)
+
+#lowest income zips
+all_zips_plotlychart %>%
+  add_fun(zip_layer, zip_name = "10452") %>%
+  add_fun(zip_layer, zip_name = "10453") %>%
+  add_fun(zip_layer, zip_name = "10454") %>% 
+  add_fun(zip_layer, zip_name = "10456") %>%
+  add_fun(zip_layer, zip_name = "10457") %>% # <- top five ends here
+  add_fun(zip_layer, zip_name = "10455") %>%
+  add_fun(zip_layer, zip_name = "10474") %>% 
+  add_fun(zip_layer, zip_name = "11355")
+
+
+
+```
+
+<br>
+
+### Covid vs. previous period - compare change in total net per zip
+
+```{r}
+#covid vs not breakdowns
+
+netflows_by_zip_andcovid_withagi <- net_flows_usps_zips_NYC %>% 
+  group_by(zipcode, borough, covid_flag) %>% 
+  summarise(total_net_gain = sum(total_net_gain, na.rm = TRUE))
+
+netflows_by_zip_andcovid_withagi <- left_join(netflows_by_zip_andcovid_withagi, irs_zips_agi_grouped, by = "zipcode") 
+
+#reshape
+net_change_byzip_withagi <- netflows_by_zip_andcovid_withagi %>% 
+  select(zipcode, borough, avg_agi, covid_flag, total_net_gain) %>% 
+  pivot_wider(names_from = covid_flag, names_prefix = "netgainloss_", values_from = total_net_gain)
+
+#calculate diff
+net_change_byzip_withagi <- net_change_byzip_withagi %>% 
+  mutate(
+    netgainloss_diff = netgainloss_covid - netgainloss_noncovid
+  ) 
+
+```
+
+Plot of change in net flow - Covid vs. Non-Covid
+```{r}
+
+forplot_net_change_byzip_withagi <- net_change_byzip_withagi %>% 
+  filter(!is.na(avg_agi))
+
+
+
+#scatterplot
+fig <- plot_ly(data = forplot_net_change_byzip_withagi, x = ~avg_agi, y = ~netgainloss_diff,
+               marker = list(size = 10,
+                             color = 'rgba(255, 182, 193, .9)',
+                             line = list(color = 'rgba(152, 0, 0, .8)',
+                                         width = 1)))
+fig <- fig %>% layout(title = 'Covid vs. Non-Covid Change in Net Moves (NYC Zips)',
+         yaxis = list(zeroline = FALSE, title = 'Change in Net Gain/Loss'),
+         xaxis = list(zeroline = FALSE, title = 'Avg Adjusted Gross Income'))
+
+fig
+
+
+```
+
+Plot of change in net flow - Covid vs. Non-Covid - with boroughs
+```{r}
+#scatterplot adding color for boroughs
+fig <- plot_ly(data = net_change_byzip_withagi, x = ~avg_agi, y = ~netgainloss_diff, color = ~borough,
+               marker = list(size = 10,
+                             line = list(color = 'grey',
+                                         width = 1)))
+
+fig <- fig %>% layout(title = 'Covid vs. Non-Covid Change in Net Moves (NYC Zips)',
+         yaxis = list(zeroline = FALSE, title = 'Change in Net Gain/Loss'),
+         xaxis = list(zeroline = FALSE, title = 'Avg Adjusted Gross Income'))
+
+fig
+
+```
+
+
+
