@@ -10,4 +10,4 @@ People using these materials after the conference should have the latest version
 
 **`usethis::use_course("https://github.com/amkessler/NICAR2022_Dataviz_in_R/archive/refs/heads/master.zip")`**
 
-The material for this session is based on pairing my own scripts on GIS concepts and social network analysis with a script by Ron Campbell on ggplot2, to cover the concepts of data visualization through mapping and charts with R.
+The material for this session is based on pairing my own scripts on GIS concepts and mapping, social network analysis, and plotly charting, with a script by Ron Campbell on ggplot2 charting and mapping.
