@@ -4,7 +4,7 @@ This is the repository for an <code>R</code> class on advanced concepts in visua
 
 People using these materials should have the latest versions of R and R Studio, the tidyverse metapackage installed, plus the following packages, which can be installed by running this line of code in the console:
 
-`install.packages(c("sf", "scales", "viridis", "tmap", "tigris", "tmaptools", "maps", "geosphere", "htmltools", "janitor", "rmapshaper", "here", "usethis", "kableExtra", "janitor", "igraph", "tidygraph", "ggraph"))`
+`install.packages(c("sf", "scales", "viridis", "tmap", "tigris", "tmaptools", "maps", "geosphere", "htmltools", "janitor", "rmapshaper", "here", "usethis", "kableExtra", "janitor", "igraph", "tidygraph", "ggraph", "RColorBrewer", "plotly"))`
 
 **To load the repo for this class session, run this line from the console:**
 
