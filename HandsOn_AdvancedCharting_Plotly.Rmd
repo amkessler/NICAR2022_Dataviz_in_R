@@ -156,10 +156,20 @@ fig <- plot_ly(data= net_flows_NYC_monthly, x = ~datemonth, y = ~total_net_gain,
                type = 'scatter', mode = 'bars',
                line = list(color = 'darkred', width = 3))
 
+fig
+```
+
+
+```{r, message=FALSE, warning=FALSE}
 fig <- fig %>% layout(title = "Net number of household moves from all NYC zip codes",
          xaxis = list(title = "Months"),
          yaxis = list (title = "Net gain/loss in Moves"))
 
+fig
+```
+
+
+```{r, message=FALSE, warning=FALSE}
 fig <- fig %>% 
   config(displayModeBar = FALSE)
 
@@ -305,10 +315,8 @@ net_change_byzip_withagi <- net_change_byzip_withagi %>%
 
 Plot of change in net flow - Covid vs. Non-Covid
 ```{r}
-
 forplot_net_change_byzip_withagi <- net_change_byzip_withagi %>% 
   filter(!is.na(avg_agi))
-
 
 
 #scatterplot
@@ -317,6 +325,11 @@ fig <- plot_ly(data = forplot_net_change_byzip_withagi, x = ~avg_agi, y = ~netga
                              color = 'rgba(255, 182, 193, .9)',
                              line = list(color = 'rgba(152, 0, 0, .8)',
                                          width = 1)))
+fig
+```
+
+
+```{r}
 fig <- fig %>% layout(title = 'Covid vs. Non-Covid Change in Net Moves (NYC Zips)',
          yaxis = list(zeroline = FALSE, title = 'Change in Net Gain/Loss'),
          xaxis = list(zeroline = FALSE, title = 'Avg Adjusted Gross Income'))
@@ -334,6 +347,11 @@ fig <- plot_ly(data = net_change_byzip_withagi, x = ~avg_agi, y = ~netgainloss_d
                              line = list(color = 'grey',
                                          width = 1)))
 
+fig
+```
+
+
+```{r}
 fig <- fig %>% layout(title = 'Covid vs. Non-Covid Change in Net Moves (NYC Zips)',
          yaxis = list(zeroline = FALSE, title = 'Change in Net Gain/Loss'),
          xaxis = list(zeroline = FALSE, title = 'Avg Adjusted Gross Income'))
