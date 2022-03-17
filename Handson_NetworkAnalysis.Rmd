@@ -381,3 +381,74 @@ final
 ```
 
 And there we go! Nice. We've made it, and congrats on your first network visualization in R.
+
+# Network Analysis Measures
+
+## Analyzing the power and influence within a network
+
+More on what some of these algorithms and measure mean [here](https://folgerpedia.folger.edu/Glossary_of_network_analysis_terms).
+
+```{r}
+
+routes_tidy_two_or_more
+
+```
+
+**Degree centrality**
+
+```{r}
+
+routes_tidy_two_or_more %>% 
+  activate(nodes) %>%
+  mutate(importance = centrality_degree()) 
+
+```
+
+Can sort just like we're used to doing with other tidyverse data
+
+```{r}
+
+routes_tidy_two_or_more %>% 
+  activate(nodes) %>%
+  mutate(importance = centrality_degree()) %>% 
+  arrange(desc(importance))
+
+```
+
+**Betweenness**
+
+```{r}
+
+routes_tidy_two_or_more %>% 
+  activate(nodes) %>%
+  mutate(importance = centrality_betweenness())
+
+```
+
+```{r}
+
+routes_tidy_two_or_more %>% 
+  activate(nodes) %>%
+  mutate(importance = centrality_betweenness(weights = weight))
+
+```
+
+**Eigenvector**
+
+```{r}
+
+routes_tidy_two_or_more %>% 
+  activate(nodes) %>%
+  mutate(importance = centrality_eigen()) %>% 
+  arrange(desc(importance))
+
+```
+
+```{r}
+
+routes_tidy_two_or_more %>% 
+  activate(nodes) %>%
+  mutate(importance = centrality_eigen(weights = weight)) %>% 
+  arrange(desc(importance))
+
+```
